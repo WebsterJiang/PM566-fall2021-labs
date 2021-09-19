@@ -1,0 +1,140 @@
+---
+title: "LAB4" 
+output: html_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, chche=TRUE}
+library(data.table)
+library(tidyverse)
+if (!file.exists("met_all.gz"))
+  download.file(
+    url = "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz",
+    destfile = "met_all.gz",
+    method   = "libcurl",
+    timeout  = 60
+    )
+met <- data.table::fread("met_all.gz")
+```
+
+## 2.Prepare the data
+```{r data-prep, chche=TRUE}
+# remove temp less than -17
+met <- met[temp>=-17]
+# check missing value
+met[,table(is.na(temp))]
+met[,table(is.na(rh))]
+met[,table(is.na(wind.sp))]
+met[,table(is.na(vis.dist))]
+met[,table(is.na(dew.point))]
+met[,table(is.na(lat))]
+met[,table(is.na(lon))]
+met[,table(is.na(elev))]
+
+met[,range(temp)]
+met[,range(rh, na.rm=TRUE)]
+met[,range(wind.sp,na.rm=TRUE)]
+met[,range(vis.dist,na.rm=TRUE)]
+met[,range(dew.point,na.rm=TRUE)]
+met[,range(lat,na.rm=TRUE)]
+met[,range(lon,na.rm=TRUE)]
+met[,range(elev,na.rm=TRUE)]
+
+met<- met[elev == 9999.0, elev := NA]
+met[, ymd:= as.Date(paste(year, month, day, sep = "-"))]
+met[, table(week(ymd))]
+met <-met[week(ymd)==31]
+
+
+met_avg <- met[,.(
+  temp     = mean(temp,na.rm=TRUE),
+  rh       = mean(rh,na.rm=TRUE),
+  wind.sp  = mean(wind.sp,na.rm=TRUE),
+  vis.dist = mean(vis.dist,na.rm=TRUE),
+  dew.point= mean(dew.point, na.rm=TRUE),
+  lat      = mean(lat,na.rm=TRUE),
+  lon      = mean(lon,na.rm=TRUE), 
+  elev     = mean(elev,na.rm=TRUE)
+), by="USAFID"]
+
+
+
+met_avg[lat>=39.71 &lon<=-98, region :="NorthWest"]
+met_avg[lat<39.71 &lon<=-98, region :="SouthWest"]
+met_avg[lat>=39.71 &lon>-98, region :="NorthEast"]
+met_avg[lat<39.71 &lon>-98, region :="SouthEast"]
+
+met_avg[, table(region, useNA="always")]
+
+met_avg[, elev_cat := fifelse(elev > 252, "high", "low")]
+```
+
+# 3. Use geom_violin to examine the wind speed and dew point temperature by region
+
+```{r violin-temp}
+ggplot(met_avg, mapping=aes(y=wind.sp,x=1))+
+  geom_violin()+
+  facet_grid(~region)
+```
+# 4. Use geom_jitter with stat_smooth to examine the association between dew point temperature and wind speed by region
+```{r}
+library(ggplot2)
+library(cowplot)
+jitter <-met_avg[!is.na(region) & !is.na(dew.point)&!is.na(wind.sp)]
+jitter <- ggplot(data = met_avg[1:1000,]) + 
+geom_point(mapping = aes(x =wind.sp, y = dew.point, color=region), position = "jitter")+
+geom_smooth(mapping = aes(x =wind.sp, y = dew.point, color=region))
+plot_grid(jitter, labels = "AUTO")
+```
+## From the plot, we find that there is no obvious association between dews point tempreture and wind speed in the region of NorthEast, SouthEast and SouthWest. For the region NorthWest, We detect that when wind speed lower than 4, the dew point tempreture would increase with the increasing of wind speed and when wind speed higher than 4, the dew point tempreture will decrease with the increasing of wind speed.
+
+
+# 5. Use geom_bar to create barplots of the weather stations by elevation category coloured by region
+```{r}
+met_avg[, vis_cat  := cut(
+  x      = vis.dist,
+  breaks = c(0, 1000, 6000, 10000, Inf),
+  labels = c("fog", "mist", "haze", "clear"),
+  right  = FALSE
+)]
+met_avg[!is.na(vis_cat)&!is.na(region)&!is.na(elev_cat)] %>%
+  ggplot() + 
+  geom_bar(mapping = aes(x = elev_cat, fill = vis_cat), position ="dodge")+
+  scale_fill_brewer(palette = "Blues")+
+  labs(title = "Weather Station Data") + 
+  labs(x = expression("Elevation"), y = "visual distance")
+```
+## There is no clearly association between elevation and visual distance in this aggregated dataset.
+
+# 6. Use stat_summary to examine mean dew point and wind speed by region with standard deviation error bars
+```{r plot-stat_summ}
+ggplot(met_avg[!is.na(wind.sp) &!is.na(dew.point)],
+  mapping = aes(x=region,y=wind.sp))+
+  stat_summary(fun.data="mean_sdl")+
+  stat_summary(fun.data = "mean_sdl", geom="errorbar")
+```
+
+# 7. Make a map showing the spatial trend in relative h in the US
+
+```{r leaflet}
+library(leaflet)
+
+temp.pal <- colorNumeric(c('darkgreen','goldenrod','brown'), domain=met_avg$rh)
+
+leaflet(met_avg) %>%
+   addProviderTiles('CartoDB.Positron') %>%
+   addCircles(
+   lat = ~lat, lng=~lon,
+                                                
+   label = ~paste0(round(rh,2), ' rh'), color = ~ temp.pal(rh),
+   opacity = 1, fillOpacity = 1, radius = 500
+     ) %>%
+   # And a pretty legend
+   addLegend('bottomleft', pal=temp.pal, values=met_avg$rh,
+           title='Temperature, C', opacity=1)
+```
+
