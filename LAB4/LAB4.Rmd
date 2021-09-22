@@ -1,7 +1,7 @@
 ---
 title: "LAB4"
 output:
-  html_document:
+  github_document:
     df_print: paged
 always_allow_html: yes
 ---
@@ -139,4 +139,13 @@ leaflet(met_avg) %>%
    addLegend('bottomleft', pal=temp.pal, values=met_avg$rh,
            title='Temperature, C', opacity=1)
 ```
+## 8. Use a ggplot extension
 
+```{r ggforce}
+library(ggforce)
+library(ggplot2)
+devtools::install_github("thomasp85/ggforce")
+ggplot(met_avg, aes(wind.sp, dew.point, colour = region)) +
+  geom_point() +
+  facet_zoom(x = region == "SouthEast")
+```
