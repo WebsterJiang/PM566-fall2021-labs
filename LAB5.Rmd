@@ -1,0 +1,182 @@
+---
+title: "LAB5"
+output:
+    html_document:
+    html_preview: false
+    github_document:
+    df_print: paged
+    always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r chche==TRUE}
+library(data.table)
+library(dtplyr)
+library(dplyr)
+library(ggplot2)
+# Download the data
+stations <- fread("ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv")
+stations[, USAF := as.integer(USAF)]
+
+# Dealing with NAs and 999999
+stations[, USAF   := fifelse(USAF == 999999, NA_integer_, USAF)]
+stations[, CTRY   := fifelse(CTRY == "", NA_character_, CTRY)]
+stations[, STATE  := fifelse(STATE == "", NA_character_, STATE)]
+
+# Selecting the three relevant columns, and keeping unique records
+stations <- unique(stations[, list(USAF, CTRY, STATE)])
+
+# Dropping NAs
+stations <- stations[!is.na(USAF)]
+
+# Removing duplicates
+stations[, n := 1:.N, by = .(USAF)]
+stations <- stations[n == 1,][, n := NULL]
+```
+
+```{r packages, chche=TRUE}
+library(tidyverse)
+if (!file.exists("../met_all.gz"))
+  download.file(
+    url = "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz",
+    destfile = "../met_all.gz",
+    method   = "libcurl",
+    timeout  = 60
+    )
+met <- data.table::fread("../met_all.gz")
+```
+
+```{r merging}
+met <- merge(
+  x = met,
+  y = stations,
+  all.x = TRUE, all.y = FALSE,
+  by.x = "USAFID", by.y = "USAF"
+)
+```
+## Question 1:
+```{r collapsing-by-station}
+station_ave<-met[ , .(
+  temp        =mean(temp, na.rm=TRUE),
+  wind.sp     =mean(wind.sp, na.rm=TRUE),
+  atm.press   =mean(atm.press, na.rm=TRUE)
+), by=.(USAFID, STATE)]
+
+```
+
+```{r quantiles}
+medians<-station_ave[, .(
+  temp_50=quantile(temp, probs=.5, na.rm=TRUE),
+  wind.sp_50=quantile(wind.sp, probs=.5, na.rm=TRUE),
+  atm.press_50=quantile(atm.press, probs=.5, na.rm=TRUE)
+)]
+
+medians
+```
+```{r}
+# Now we can find the stations that are the closest to these
+# Median tempreture station
+station_ave[, temp_dist:= abs(temp-medians$temp_50)]
+meadian_temp_station<-station_ave[order(temp_dist)][1]
+meadian_temp_station
+
+# Median wind.sp station
+station_ave[, wind.sp_dist:= abs(wind.sp-medians$wind.sp_50)]
+meadian_wind.sp_station<-station_ave[order(wind.sp_dist)][1]
+meadian_wind.sp_station
+
+# Median atm.press station
+station_ave[, atm.press_dist:= abs(atm.press-medians$atm.press)]
+meadian_atm.press_station<-station_ave[order(atm.press_dist)][1]
+meadian_atm.press_station
+```
+
+
+# Question 2:
+```{r}
+station_ave[, temp_50 :=quantile(temp, probs= .5, na.rm=TRUE)]
+#Another Method
+x<-merge(x=station_ave, y=stations,
+      by.x= "USAFID", by.y= "USAF",
+      all.x=TRUE, all.y=FALSE)
+
+
+```
+Now we can compute the median per state
+```{r}
+station_ave[, temp_50 :=quantile(temp, probs= .5, na.rm=TRUE), by = STATE]
+station_ave[, wind.sp_50 :=quantile(wind.sp, probs= .5, na.rm=TRUE), by = STATE]
+
+# get the euclidean distance
+station_ave[,eudist:=sqrt(
+  (temp-temp_50)^2+(wind.sp-wind.sp_50)^2
+)]
+
+# Choose the most representative, the median, station per state with the lowest euclidean distance.
+id_station<-station_ave[ , .SD[which.min(eudist)], by = STATE]
+
+```
+
+# Question 3:
+```{r}
+# get the mid point of the state
+mid_point<-met[, .(
+  lon_50=quantile(lon, probs=.5, na.rm=TRUE),
+  lat_50=quantile(lat, probs=.5, na.rm=TRUE)
+),
+by=STATE]
+
+mid<-merge(x=met, y=mid_point, by="STATE")
+
+# calculate euclidean distance
+mid[, mid_eudist:=sqrt(
+  (lon-lon_50)^2+(lat-lat_50)^2
+)]
+# find the closest station to mid-point of state
+mid_station<-mid[ , .SD[which.min(mid_eudist)], by = STATE]
+
+library(leaflet)
+leaflet() %>% 
+  addProviderTiles('CartoDB.Positron') %>% 
+  addCircles(
+    data = mid_station,
+    lat = ~lat, lng = ~lon, popup = "mid station",
+    opacity = 1, fillOpacity = 1, radius = 400, color = "Blue"
+    )
+
+```
+
+# Question 4:
+```{r}
+met[, state_tempreture :=mean(temp, na.rm = TRUE), by = STATE]
+    
+met[, temp_cat := fifelse(
+  state_tempreture < 20, "low-temp", 
+  fifelse(state_tempreture < 25, "mid-temp", "high-temp"))
+  ]
+
+
+```
+Make sure we don't have NAs
+```{r}
+table(met$temp_cat, useNA="always")
+```
+Now let's summarize
+```{r}
+tab <- met[, .(
+  N_entries       =.N,
+  N_entries_na    =sum(is.na(temp_cat)),
+  N_stations      =length(unique(USAFID)),
+  N_states        =length(unique(STATE)),
+  Mean_temp       =mean(temp, na.rm = TRUE),
+  Mean_wind.sp    =mean(wind.sp, na.rm = TRUE),
+  Mean_atm.press  =mean(atm.press, na.rm = TRUE)
+  ),
+  by=temp_cat]
+knitr::kable(tab)
+```
+
+
