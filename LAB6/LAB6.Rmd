@@ -1,0 +1,78 @@
+---
+title: "LAB6"
+output: 
+    html_document:
+    html_preview: false
+    github_document:
+    df_print: paged
+    always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(tibble)
+library(tidytext)
+library(ggplot2)
+```
+
+
+```{r get data}
+fn<-"mtsamples.csv"
+if (!file.exists(fn))
+  download.file("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/00_mtsamples/mtsamples.csv",
+    destfile = fn
+    )
+
+mtsamples<-read.csv(fn)
+mtsamples<-as.tibble(mtsamples)
+head(mtsamples)
+
+```
+## Question 1: How many and how are specialties
+```{r}
+specialties<-mtsamples %>%
+  count(medical_specialty)
+
+specialties %>%
+  arrange(desc(n))%>%
+  top_n(15)%>%
+  knitr::kable()
+```
+
+```{r dist}
+# Method 1: Not that pretty
+ggplot(mtsamples, aes(x=medical_specialty))+
+      geom_histogram(stat="count")+
+      coord_flip()
+
+# Method 2:
+ggplot(specialties, aes(x=n, y=fct_reorder(medical_specialty,n)))+
+  geom_col()
+         
+```
+# Question 2:
+```{r token-transcript, cache=TRUE}
+mtsamples %>%
+  unnest_tokens(output=word, input=transcription) %>%
+  count(word, sort = TRUE) %>%
+  top_n(20) %>%
+  ggplot(aes(x=n, y=fct_reorder(word, n))) +
+  geom_col()
+```
+## Note that "patient" seems important.
+
+# Question 3:
+```{r}
+mtsamples %>%
+  unnest_tokens(output=word, input=transcription) %>%
+  count(word, sort = TRUE) %>%  
+  anti_join(stop_words, by="word")%>%
+  top_n(20) %>%
+  ggplot(aes(x=n, y=fct_reorder(word, n))) +
+  geom_col()
+
+# Looking better, but we don't like numbers.
+```
+
