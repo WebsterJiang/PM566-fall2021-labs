@@ -1,13 +1,12 @@
 ---
 title: "LAB6"
 output: 
-    html_document:
-    html_preview: false
     github_document:
+    html_preview: false
+    html_document:
     df_print: paged
     always_allow_html: yes
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -69,10 +68,82 @@ mtsamples %>%
   unnest_tokens(output=word, input=transcription) %>%
   count(word, sort = TRUE) %>%  
   anti_join(stop_words, by="word")%>%
+  # Using regular expression to remove numbers
+  filter(!grepl("^[0-9]+$", x= word))%>%
   top_n(20) %>%
   ggplot(aes(x=n, y=fct_reorder(word, n))) +
   geom_col()
 
 # Looking better, but we don't like numbers.
 ```
+# Question 4: Repeat question 2, but this time tokenize into bi-grams. how does the result change if you look at tri-grams?
+```{r}
+# Bigram
+mtsamples %>%
+  unnest_ngrams(output=bigram, input=transcription,n=2) %>%
+  count(bigram, sort = TRUE) %>%
+  top_n(20) %>%
+  ggplot(aes(x=n, y=fct_reorder(bigram, n))) +
+  geom_col()
+
+#Trigram
+mtsamples %>%
+  unnest_ngrams(output=trigram, input=transcription,n=3) %>%
+  count(trigram, sort = TRUE) %>%
+  top_n(20) %>%
+  ggplot(aes(x=n, y=fct_reorder(trigram, n))) +
+  geom_col()
+```
+Now some phrases start to show up like "tolerated the procedure"
+
+# Question 5:
+```{r warning=FALSE}
+bigrams <-mtsamples %>%
+  unnest_ngrams(output=bigram, input=transcription,n=2) %>%
+  separate(bigram,into =c("w1","w2"),sep=" ")
+  
+bigrams %>% 
+  filter(w1=="there")%>%
+  select(w1,w2)%>%
+  count(w2, sort =TRUE)
+
+bigrams %>% 
+  filter(w2=="is")%>%
+  select(w1,w2)%>%
+  count(w1, sort =TRUE)
+```
+since we are looking at single word again, it's a good idea to treat these as single tokens. So let's remove the stop-word and the numbers
+
+```{r there-word-stop}
+# Words after "there" without stop word and numbers
+bigrams %>% 
+  filter(w1=="there") %>%
+  filter(!(w2 %in% stop_words$word)&!grepl("^[0-9]+$",w2)) %>%
+  count(w2,sort=TRUE)%>%
+  top_n(10)%>%
+  knitr::kable()
+
+# Words before "is" without stop word or numbers
+bigrams %>% 
+  filter(w2=="is") %>%
+  filter(!(w1 %in% stop_words$word)&!grepl("^[0-9]+$",w1)) %>%
+  count(w1,sort=TRUE)%>%
+  top_n(10)%>%
+  knitr::kable()
+```
+
+# Question 6: Which words are most used in each of the specialties. you can use group_by() and top_n() from dplyr to have the calculations be done within each specialty. Remember to remove stopwords. How about the most 5 used words?
+```{r}
+mtsamples %>% 
+  unnest_tokens(word, input=transcription)%>%
+  group_by(medical_specialty)%>%
+  count(word,sort=TRUE)%>%
+  filter(!(word %in% stop_words$word)&!grepl("^[0-9]+$",word)) %>%
+  top_n(5)%>%
+  arrange(medical_specialty,desc(n))%>%
+  knitr::kable()
+  
+
+```
+
 
