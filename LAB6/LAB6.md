@@ -480,3 +480,4 @@ mtsamples %>%
 | Urology                       | procedure    |  306 |
 | Urology                       | left         |  288 |
 | Urology                       | history      |  196 |
+
