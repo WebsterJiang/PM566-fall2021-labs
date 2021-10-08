@@ -131,7 +131,6 @@ leaflet(met_avg) %>%
    addProviderTiles('CartoDB.Positron') %>%
    addCircles(
    lat = ~lat, lng=~lon,
-                                                
    label = ~paste0(round(rh,2), ' rh'), color = ~ temp.pal(rh),
    opacity = 1, fillOpacity = 1, radius = 500
      ) %>%
