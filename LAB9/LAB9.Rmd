@@ -1,0 +1,37 @@
+---
+title: "LAB9"
+output: 
+    github_document:
+    html_preview: false
+    html_document:
+    df_print: paged
+    always_allow_html: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(microbenchmark)
+```
+
+This function generates a n x k dataset with all its entries distributed poission with mean lambda.
+```{r}
+fun1 <- function(n = 100, k = 4, lambda = 4) {
+  x <- NULL
+  for (i in 1:n)
+    x <- rbind(x, rpois(k, lambda))
+  x
+}
+
+fun1alt <- function(n = 100, k = 4, lambda = 4) {
+  matrix(rpois(n*k,lambda), nrow=n, ncol=k)
+}
+
+# Benchmarking
+microbenchmark::microbenchmark(
+  fun1(n=1000),
+  fun1alt(n=1000),unit="relative"
+)
+
+
+```
+Find the column max (hint: Checkout the function max.col()).
+
