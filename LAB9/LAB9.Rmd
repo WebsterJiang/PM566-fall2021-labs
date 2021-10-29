@@ -1,9 +1,9 @@
 ---
 title: "LAB9"
 output: 
-    html_document:
     html_preview: false
     github_document:
+    html_document:
     df_print: paged
     always_allow_html: yes
 ---
