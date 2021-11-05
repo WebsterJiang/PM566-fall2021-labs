@@ -37,9 +37,87 @@ dbListTables(con)
 ### Exercise 1:Retrive the actor ID, first name and last name for all actors using the actor table. Sort by last name and then by first name.
 ```{r}
 ex1<- dbGetQuery(con,
-      "select *
-      From")
+      "SELECT actor_id, last_name, first_name
+      FROM actor
+      ORDER by last_name, first_name
+      LIMIT 5  /*report first 5 records */")
+ex1
 ```
+### Exercise 2: Retrive the actor ID, first name, and last name for actors whose last name equals ‘WILLIAMS’ or ‘DAVIS’.
+```{r}
+ex2<- dbGetQuery(con,
+      "SELECT actor_id, last_name, first_name
+      FROM actor
+      WHERE last_name IN ('WILLIAMS', 'DAVIS') 
+      LIMIT 5  /*report first 5 records */")
+ex2
+```
+### Exercise 3:Write a query against the rental table that returns the IDs of the customers who rented a film on July 5, 2005 (use the rental.rental_date column, and you can use the date() function to ignore the time component). Include a single row for each distinct customer ID.
+```{r}
+ex3<- dbGetQuery(con,
+      "SELECT DISTINCT customer_id
+      FROM rental
+      WHERE date(return_date) = '2005-07-05'
+      LIMIT 5")
+ex3
+```
+### Exercise 4.1: Construct a query that retrives all rows from the payment table where the amount is either 1.99, 7.99, 9.99.
+
+```{r}
+ex4_1<-dbSendQuery(con,"
+SELECT *
+FROM payment
+WHERE amount IN (1.99, 7.99, 9.99)")
+
+dbFetch(ex4_1, n=10)
+```
+### Exercise 4.2:Construct a query that retrives all rows from the payment table where the amount is greater then 5.
+```{r}
+ex4_2<-dbGetQuery(con,"
+SELECT *
+FROM payment
+WHERE amount > 5
+LIMIT 5"
+)
+ex4_2
+```
+### Exercise 4.3:Construct a query that retrives all rows from the payment table where the amount is greater then 5 and less then 8
+```{r}
+ex4_3<-dbGetQuery(con,"
+SELECT *
+FROM payment
+WHERE amount > 5 and amount < 8
+LIMIT 5"
+)
+ex4_3
+```
+Bonus: Count how many are?
+```{r}
+Bonus<-dbGetQuery(con,"
+SELECT COUNT(*)
+FROM payment
+WHERE amount > 5
+LIMIT 5"
+)
+Bonus
+```
+Counting per staff 'staff_id'
+```{r}
+staff<-dbGetQuery(con,"
+SELECT staff_id COUNT (*) AS N
+FROM payment
+WHERE amount > 5
+GROUP BY staff_id
+")
+staff
+```
+
+### Exercise 5: Retrive all the payment IDs and their amount from the customers whose last name is ‘DAVIS’.
+```{r}
+
+```
+
+
 
 
 
