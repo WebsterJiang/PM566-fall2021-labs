@@ -1,6 +1,11 @@
 ---
 title: "LAB10"
-output: html_document
+output: 
+    github_document:
+    html_preview: false
+    html_document:
+    df_print: paged
+    always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -57,7 +62,7 @@ ex2
 ex3<- dbGetQuery(con,
       "SELECT DISTINCT customer_id
       FROM rental
-      WHERE date(return_date) = '2005-07-05'
+      WHERE date(rental_date) = '2005-07-05'
       LIMIT 5")
 ex3
 ```
@@ -104,7 +109,7 @@ Bonus
 Counting per staff 'staff_id'
 ```{r}
 staff<-dbGetQuery(con,"
-SELECT staff_id COUNT (*) AS N
+SELECT staff_id, COUNT (*) AS N
 FROM payment
 WHERE amount > 5
 GROUP BY staff_id
@@ -114,17 +119,94 @@ staff
 
 ### Exercise 5: Retrive all the payment IDs and their amount from the customers whose last name is ‘DAVIS’.
 ```{r}
+ex5<-dbGetQuery(con,"
+SELECT p.payment_id, p.amount
+FROM payment AS p
+  INNER JOIN customer AS c ON p.customer_id=c.customer_id
+where c.last_name = 'DAVIS'"
+)
+ex5
+```
+### Exercise 6.1:Use COUNT(*) to count the number of rows in rental
+```{r}
+ex6_1<-dbGetQuery(con,"
+SELECT COUNT (*)
+FROM rental
+")
+ex6_1
+```
+
+### Exercise 6.2:Use COUNT(*) and GROUP BY to count the number of rentals for each customer_id
+```{r}
+ex6_2<-dbGetQuery(con,"
+SELECT customer_id, COUNT (*) AS 'N Rentals'
+FROM rental
+GROUP BY customer_id
+LIMIT 10
+")
+ex6_2
+```
+### Exercise 6.3:Repeat the previous query and sort by the count in descending order
+```{r}
+ex6_3<-dbGetQuery(con,"
+SELECT customer_id, COUNT (*) AS 'N Rentals' 
+FROM rental
+GROUP BY customer_id
+ORDER BY COUNT (*) DESC 
+LIMIT 10
+")
+ex6_3
+```
+### Exercise 6.4 :Repeat the previous query but use HAVING to only keep the groups with 40 or more.
+```{r}
+ex6_4<-dbGetQuery(con,"
+SELECT customer_id, COUNT (*) AS 'N Rentals' 
+FROM rental
+GROUP BY customer_id
+HAVING COUNT(*) >= 40
+ORDER BY COUNT (*) DESC 
+LIMIT 10
+")
+ex6_4
+```
+### Exercise 7:The following query calculates a number of summary statistics for the payment table using MAX, MIN, AVG and SUM
+```{r}
+ex7<-dbGetQuery(con,"
+SELECT MAX(amount) AS max_amount, MIN(amount) AS min_amount, AVG(amount) AS avg_amount, SUM(amount) AS sum_amount
+FROM payment
+")
+ex7
+```
+### Exercise 7.1:Modify the above query to do those calculations for each customer_id
+```{r}
+ex7_1<-dbGetQuery(con,"
+SELECT customer_id, MAX(amount) AS max_amount, MIN(amount) AS min_amount, AVG(amount) AS avg_amount, SUM(amount) AS sum_amount
+FROM payment
+GROUP BY customer_id 
+LIMIT 10
+")
+ex7_1
+```
+
+### Exercise 7.2:Modify the above query to only keep the customer_ids that have more then 5 payments
+```{r}
+ex7_2<-dbGetQuery(con,"
+SELECT customer_id, COUNT(*) AS N, MAX(amount) AS max_amount, MIN(amount) AS min_amount, AVG(amount) AS avg_amount, SUM(amount) AS sum_amount
+FROM payment
+GROUP BY customer_id 
+HAVING COUNT(*) >5
+LIMIT 10
+")
+ex7_2
 
 ```
 
 
 
-
-
-
-
-
-
+### Clean Up:
+```{r}
+dbDisconnect(con)
+```
 
 
 
