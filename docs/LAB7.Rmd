@@ -17,7 +17,6 @@ library(tidytext)
 
 ```{r} 
 if (knitr::is_html_output(excludes = "gfm")) {
-  
 }
 ```
 
