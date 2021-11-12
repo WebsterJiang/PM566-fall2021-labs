@@ -7,6 +7,8 @@ output:
   word_document: default
 always_allow_html: true
 ---
+**See my lab output** [**Here**](https://github.com/WebsterJiang/PM566-fall2021-labs/blob/main/LAB11/LAB11.html)
+
 # Step 1
 cd ~/Documents
 mkdir lab11
