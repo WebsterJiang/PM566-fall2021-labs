@@ -5,7 +5,7 @@ output:
     html_preview: false
     html_document:
     df_print: paged
-    always_allow_html: yes
+    always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
