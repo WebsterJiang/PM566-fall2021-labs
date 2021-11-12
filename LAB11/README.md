@@ -2,7 +2,7 @@ LAB 11
 ================
 
 **See my lab output**
-[**Here**](https://github.com/WebsterJiang/PM566-fall2021-labs/blob/main/LAB11/LAB11.html)
+[**Here**](https://ghcdn.rawgit.org/WebsterJiang/PM566-fall2021-labs/main/LAB11/LAB11.html)
 
 # Step 1
 
